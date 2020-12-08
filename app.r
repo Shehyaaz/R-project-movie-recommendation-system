@@ -162,7 +162,7 @@ ui <- dashboardPage(
            br(),
            h4(
              "Content-based approach requires a good amount of information of items’ own features, 
-             rather than using users’ interactions and feedbacks.Collaborative Filtering, on the 
+             rather than using users’ interactions and feedbacks. Collaborative Filtering, on the 
              other hand, doesn’t need anything else except users’ historical preference on a set of 
              items. Because it’s based on historical data, the core assumption here is that the users 
              who have agreed in the past tend to also agree in the future."
@@ -311,10 +311,9 @@ ui <- dashboardPage(
           uiOutput("movie_rating08"),
           uiOutput("movie_rating09"),
           uiOutput("movie_rating10"),
-          sliderInput(
-            inputId = "num_recomm", min = 5, max = 20, value = 5, label = "Number of Recommendations"
-          ),
           actionButton("run", "Run"),
+          br(),
+          h3("Top 10 Movie recommendations for you"),
           dataTableOutput("recomm")
         )
       )
@@ -508,12 +507,11 @@ server <- function(input, output, session) {
     for(i in 1:nrow(selected_movies)){
       selected_movies$ratingvec[i] <- input[[as.character(selected_movies$title[i])]]
     }
-    
     rating_vec <- new_movies %>% left_join(., selected_movies, by = "movieId") %>% 
       pull(ratingvec)
     rating_vec <- as.matrix(t(rating_vec))
     rating_vec <- as(rating_vec, "realRatingMatrix")
-    top_n_prediction <- predict(rec_mod, rating_vec, n = input$num_recomm)
+    top_n_prediction <- predict(rec_mod, rating_vec, n = 10)
     top_n_list <- as(top_n_prediction, "list")
     top_n_df <- data.frame(top_n_list)
     colnames(top_n_df) <- "movieId"
