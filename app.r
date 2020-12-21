@@ -124,7 +124,7 @@ scheme <- evaluationScheme(data = ratingMatrixNorm,
                               train = 0.8, # 80% training data, 20% testing data
                               k = 5, given = -1, goodRating = 0)
 rec_mod <- Recommender(ratingMatrix, method = "IBCF", 
-                       param = list(method = "cosine")) # recommendation model built
+                       param = list(method = "pearson")) # recommendation model built
 
 
 #### UI ####
@@ -169,7 +169,7 @@ ui <- dashboardPage(
            ),
            br(),
            h4(
-             "This project uses the MovieLens dataset which contains ratings of more than 1000 movies 
+             "This project uses the MovieLens dataset which contains ratings of more than 10,000 movies 
              rated by more than 600 users. Movies are recommended to users using Demographic Filtering 
              and Item-based Collaborative Filtering."
            )
@@ -232,7 +232,7 @@ ui <- dashboardPage(
           ),
           fluidRow(
             box(
-              title = "Heatmap of User Similarity",
+              title = "Heatmap of User Dissimilarity",
               status = "warning", solidHeader = TRUE, collapsible = TRUE,
               width = 6,
               sliderInput(
@@ -241,7 +241,7 @@ ui <- dashboardPage(
               plotOutput("user_similarity")
             ),
             box(
-              title = "Heatmap of Movie Similarity",
+              title = "Heatmap of Movie Dissimilarity",
               status = "warning", solidHeader = TRUE, collapsible = TRUE,
               width = 6,
               sliderInput(
