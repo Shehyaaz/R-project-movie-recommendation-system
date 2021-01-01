@@ -114,6 +114,9 @@ ratingMatrix <- ratingMatrix[rowCounts(ratingMatrix) > 50,
                              colCounts(ratingMatrix) > 50]  # considering only useful data in the dataset
 movie_details <- get_movie_details(movies_data, ratingMatrix)
 
+# set a seed
+set.seed(123)
+
 # evaluate Recommendation Models
 eval_result <- evaluate_models(ratingMatrix)
 
@@ -311,7 +314,8 @@ ui <- dashboardPage(
           uiOutput("movie_rating08"),
           uiOutput("movie_rating09"),
           uiOutput("movie_rating10"),
-          actionButton("run", "Run"),
+          actionButton("run", "Recommend using IBCF"),
+          actionButton("runHybrid", "Recommend using Hybrid Filtering"),
           br(),
           h3("Top 10 Movie recommendations for you"),
           dataTableOutput("recomm")
@@ -522,6 +526,33 @@ server <- function(input, output, session) {
     names
   })
   
+  # get data for hybrid filtering
+  recomdataHybrid <- reactive({
+    selected_movies <- movies_data %>%
+      filter(movieId %in% movie_details$movie_id) %>%
+      filter(title %in% input$movie_selection) %>%
+      arrange(title) %>%
+      select(-c(genres))
+    new_movies <- movies_data %>% filter(movieId %in% movie_details$movie_id)
+    
+    for(i in 1:nrow(selected_movies)){
+      selected_movies$ratingvec[i] <- input[[as.character(selected_movies$title[i])]]
+    }
+    rating_vec <- new_movies %>% left_join(., selected_movies, by = "movieId") %>% 
+      pull(ratingvec)
+    rating_vec <- as.matrix(t(rating_vec))
+    rating_vec <- as(rating_vec, "realRatingMatrix")
+    top_n_prediction <- predict(rec_mod, rating_vec, n = 10)
+    top_n_list <- as(top_n_prediction, "list")
+    top_n_df <- data.frame(top_n_list)
+    colnames(top_n_df) <- "movieId"
+    top_n_df$movieId <- as.numeric(levels(top_n_df$movieId))
+    names <- left_join(top_n_df, preprocessed_data, by="movieId")
+    names <- as.data.frame(names) %>%select(c(title, score)) %>% arrange(desc(score)) %>%
+      rename(Title = title)
+    names
+  })
+  
   # display tables, graphs, and results
   output$movies_data <- renderDataTable(movies_data)
   output$ratings_data <- renderDataTable(ratings_data)
@@ -595,6 +626,35 @@ server <- function(input, output, session) {
         type = "info")
     }else{
       recomdata <- recomdata()
+      if(length(input$movie_selection) < 2){
+        sendSweetAlert(
+          session = session,
+          title = "Please select more movies.",
+          text = "Rate at least two movies.",
+          type = "info")
+      }
+      else if(nrow(recomdata) < 1){
+        sendSweetAlert(
+          session = session,
+          title = "Please vary in your ratings.",
+          text = "Do not give the same rating for all movies.",
+          type = "info")
+      } else{
+        output$recomm <- renderDataTable(recomdata) 
+      }
+    }
+  })
+  
+  # recommended movies - Hybrid - combination of IBCF and demographic filtering
+  observeEvent(input$runHybrid, {
+    if(length(input$movie_selection) == 0){
+      sendSweetAlert(
+        session = session,
+        title = "Please select more movies.",
+        text = "Rate at least two movies.",
+        type = "info")
+    }else{
+      recomdata <- recomdataHybrid()
       if(length(input$movie_selection) < 2){
         sendSweetAlert(
           session = session,
